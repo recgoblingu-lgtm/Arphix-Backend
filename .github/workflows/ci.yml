@@ -1,0 +1,39 @@
+name: Backend CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Restore
+        run: dotnet restore src/Revival.Api/Revival.Api.csproj
+      - name: Build Debug
+        run: dotnet build src/Revival.Api/Revival.Api.csproj --no-restore
+      - name: Build Release
+        run: dotnet build src/Revival.Api/Revival.Api.csproj -c Release --no-restore
+      - name: Install EF Core CLI
+        run: |
+          dotnet tool install --global dotnet-ef --version 8.0.20
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+      - name: Validate SQLite and PostgreSQL migrations
+        run: |
+          dotnet ef migrations script --context SqliteAppDbContext --project src/Revival.Api/Revival.Api.csproj --startup-project src/Revival.Api/Revival.Api.csproj --output "$RUNNER_TEMP/sqlite.sql"
+          dotnet ef migrations script --context PostgresAppDbContext --project src/Revival.Api/Revival.Api.csproj --startup-project src/Revival.Api/Revival.Api.csproj --output "$RUNNER_TEMP/postgres.sql"
+      - name: End-to-end smoke tests
+        run: python3 tests/smoke.py
