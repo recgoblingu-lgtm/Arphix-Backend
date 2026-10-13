@@ -1,0 +1,10 @@
+.git
+**/bin
+**/obj
+**/data
+artifacts
+*.db
+*.sqlite
+*.zip
+.env
+.env.*
